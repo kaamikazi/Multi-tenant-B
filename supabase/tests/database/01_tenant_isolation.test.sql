@@ -11,6 +11,11 @@ insert into auth.users (id, email) values
   ('b0000000-0000-0000-0000-000000000001', 'owner@globex.test'),
   ('c0000000-0000-0000-0000-000000000001', 'orphan@nowhere.test');
 
+-- The sign-up trigger (Phase 2) gives every new auth user a workspace. These
+-- fixtures build their tenants by hand, so drop the auto-created ones.
+delete from public.tenants
+ where id in (select tenant_id from public.users where id in (select id from auth.users where email like '%.test'));
+
 insert into public.tenants (id, name, slug) values
   ('aaaaaaaa-0000-0000-0000-000000000000', 'Acme',   'acme'),
   ('bbbbbbbb-0000-0000-0000-000000000000', 'Globex', 'globex');
