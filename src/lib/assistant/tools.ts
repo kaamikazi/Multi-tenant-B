@@ -4,6 +4,7 @@ import type { FunctionDeclaration } from "@google/genai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Member } from "@/lib/auth";
 import { PLANS } from "@/lib/billing";
+import { OPEN_STATUSES, SOURCE_LABEL, STATUS_LABEL, parseBreakdown, topReasons, type LeadStatus } from "@/lib/leads";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Tools the assistant may call to answer questions.
@@ -125,7 +126,127 @@ const TOOLS: Tool[] = [
       };
     },
   },
+  {
+    label: "leads",
+    declaration: {
+      name: "list_leads",
+      description:
+        "Leads ranked by score (0-100, highest first) with tier, status, owner and the top reasons for the score. " +
+        "Use for questions like 'who are my hottest leads?'. Defaults to open leads (new, contacted, qualified).",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          tier: { type: "string", enum: ["hot", "warm", "cold"], description: "Only leads in this tier." },
+          status: {
+            type: "string",
+            enum: ["open", "new", "contacted", "qualified", "won", "lost", "all"],
+            description: "Filter by status. 'open' (default) means new, contacted or qualified.",
+          },
+          assigned_to_me: { type: "boolean", description: "Only leads assigned to the current user." },
+          limit: { type: "integer", description: "How many to return, 1-25. Default 10." },
+        },
+      },
+    },
+    async run({ supabase, member }, args) {
+      const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 25);
+      let query = supabase
+        .from("leads_scored")
+        .select("name, company, source, status, score, tier, breakdown, owner_id, last_engaged_at")
+        .order("score", { ascending: false })
+        .limit(limit);
+      if (args.tier === "hot" || args.tier === "warm" || args.tier === "cold") query = query.eq("tier", args.tier);
+      const status = typeof args.status === "string" ? args.status : "open";
+      if (status === "open") query = query.in("status", OPEN_STATUSES);
+      else if (status !== "all" && status in STATUS_LABEL) query = query.eq("status", status as LeadStatus);
+      if (args.assigned_to_me === true) query = query.eq("owner_id", member.id);
+
+      const [{ data: leads }, owners] = await Promise.all([query, ownerNames(supabase)]);
+      return (leads ?? []).map((l) => ({
+        name: l.name,
+        company: l.company,
+        score: l.score,
+        tier: l.tier,
+        status: l.status,
+        source: l.source ? SOURCE_LABEL[l.source] : null,
+        owner: l.owner_id ? (l.owner_id === member.id ? "you" : owners.get(l.owner_id)) : "unassigned",
+        last_engaged: l.last_engaged_at?.slice(0, 10) ?? "never",
+        why: topReasons(parseBreakdown(l.breakdown), 3),
+      }));
+    },
+  },
+  {
+    label: "lead score breakdown",
+    declaration: {
+      name: "explain_lead_score",
+      description:
+        "The full score breakdown for leads matching a name or company: points per factor " +
+        "(budget, company size, source, recency) out of the maximum, with the reason for each.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: { query: { type: "string", description: "Part of the lead's name or company." } },
+        required: ["query"],
+      },
+    },
+    async run({ supabase }, args) {
+      const q = String(args.query ?? "").replace(/[%_,()]/g, " ").trim();
+      if (!q) return { error: "Say which lead." };
+      const { data } = await supabase
+        .from("leads_scored")
+        .select("name, company, status, score, tier, breakdown, notes")
+        .or(`name.ilike.%${q}%,company.ilike.%${q}%`)
+        .order("score", { ascending: false })
+        .limit(3);
+      if (!data?.length) return { found: false, note: `No lead matches "${q}".` };
+      return {
+        found: true,
+        leads: data.map((l) => ({
+          name: l.name,
+          company: l.company,
+          status: l.status,
+          score: l.score,
+          tier: l.tier,
+          breakdown: parseBreakdown(l.breakdown),
+          // User-entered text: returned as data only (see system instruction).
+          notes: l.notes?.slice(0, 500) ?? null,
+        })),
+      };
+    },
+  },
+  {
+    label: "pipeline summary",
+    declaration: {
+      name: "get_pipeline_summary",
+      description: "Counts of leads by tier and by status, average score of open leads, and unassigned open leads.",
+      parametersJsonSchema: { type: "object", properties: {} },
+    },
+    async run({ supabase }) {
+      const { data } = await supabase.from("leads_scored").select("status, tier, score, owner_id");
+      const leads = data ?? [];
+      const open = leads.filter((l) => l.status && OPEN_STATUSES.includes(l.status));
+      const count = <K extends string>(rows: typeof leads, key: (r: (typeof leads)[number]) => K | null) =>
+        rows.reduce<Record<string, number>>((acc, r) => {
+          const k = key(r) ?? "unknown";
+          acc[k] = (acc[k] ?? 0) + 1;
+          return acc;
+        }, {});
+      return {
+        total_leads: leads.length,
+        open_leads: open.length,
+        open_by_tier: count(open, (l) => l.tier),
+        by_status: count(leads, (l) => l.status),
+        average_open_score: open.length
+          ? Math.round(open.reduce((s, l) => s + (l.score ?? 0), 0) / open.length)
+          : null,
+        unassigned_open_leads: open.filter((l) => !l.owner_id).length,
+      };
+    },
+  },
 ];
+
+async function ownerNames(supabase: SupabaseClient<Database>) {
+  const { data } = await supabase.from("users").select("id, full_name, email");
+  return new Map((data ?? []).map((u) => [u.id, u.full_name ?? u.email]));
+}
 
 export const toolDeclarations = TOOLS.map((t) => t.declaration);
 

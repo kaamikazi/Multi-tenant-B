@@ -35,10 +35,10 @@ export function Field({
   ...props
 }: ComponentProps<"input"> & { label: string; hint?: string }) {
   return (
-    <label className="grid gap-1.5 text-sm">
+    <label className="grid min-w-0 content-start gap-1.5 text-sm">
       <span className="font-medium">{label}</span>
       <input
-        className="h-10 rounded-md border border-line bg-surface px-3 outline-none transition placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 read-only:bg-background read-only:text-muted"
+        className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 outline-none transition placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 read-only:bg-background read-only:text-muted"
         {...props}
       />
       {hint && <span className="text-xs text-muted">{hint}</span>}

@@ -193,6 +193,82 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          budget_usd: number | null
+          company: string | null
+          company_size: number | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          last_engaged_at: string | null
+          name: string
+          notes: string | null
+          owner_id: string | null
+          source: Database["public"]["Enums"]["lead_source"]
+          status: Database["public"]["Enums"]["lead_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          budget_usd?: number | null
+          company?: string | null
+          company_size?: number | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_engaged_at?: string | null
+          name: string
+          notes?: string | null
+          owner_id?: string | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          status?: Database["public"]["Enums"]["lead_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_usd?: number | null
+          company?: string | null
+          company_size?: number | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_engaged_at?: string | null
+          name?: string
+          notes?: string | null
+          owner_id?: string | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          status?: Database["public"]["Enums"]["lead_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_owner_id_tenant_id_fkey"
+            columns: ["owner_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "leads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
@@ -260,7 +336,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leads_scored: {
+        Row: {
+          breakdown: Json | null
+          budget_usd: number | null
+          company: string | null
+          company_size: number | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string | null
+          last_engaged_at: string | null
+          name: string | null
+          notes: string | null
+          owner_id: string | null
+          score: number | null
+          source: Database["public"]["Enums"]["lead_source"] | null
+          status: Database["public"]["Enums"]["lead_status"] | null
+          tenant_id: string | null
+          tier: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_owner_id_tenant_id_fkey"
+            columns: ["owner_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "leads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
@@ -297,6 +417,16 @@ export type Database = {
       transfer_ownership: { Args: { p_new_owner: string }; Returns: undefined }
     }
     Enums: {
+      lead_source:
+        | "referral"
+        | "demo_request"
+        | "webinar"
+        | "organic_search"
+        | "paid_ads"
+        | "social"
+        | "cold_outreach"
+        | "other"
+      lead_status: "new" | "contacted" | "qualified" | "won" | "lost"
       plan: "free" | "pro"
       tenant_role: "owner" | "admin" | "member"
     }
@@ -426,6 +556,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      lead_source: [
+        "referral",
+        "demo_request",
+        "webinar",
+        "organic_search",
+        "paid_ads",
+        "social",
+        "cold_outreach",
+        "other",
+      ],
+      lead_status: ["new", "contacted", "qualified", "won", "lost"],
       plan: ["free", "pro"],
       tenant_role: ["owner", "admin", "member"],
     },

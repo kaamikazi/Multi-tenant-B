@@ -12,12 +12,14 @@ export const metadata: Metadata = { title: "Assistant · TenantFlow" };
 
 const SUGGESTIONS = {
   manager: [
+    "Who are my hottest leads?",
     "Give me an overview of this workspace",
     "Who is on the team and what are their roles?",
     "Are there any pending invitations?",
     "When does our subscription renew?",
   ],
   member: [
+    "Which of my leads should I follow up first?",
     "Give me an overview of this workspace",
     "Who are the admins here?",
     "Can you show me our billing status?",
