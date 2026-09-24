@@ -13,6 +13,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // also check the role, and the database checks it again.
   const nav: NavItem[] = [
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/assistant", label: "Assistant" },
     { href: "/settings/team", label: "Team" },
     ...(can(member.role, "billing:view") ? [{ href: "/settings/billing", label: "Billing" }] : []),
     { href: "/settings/workspace", label: "Workspace" },

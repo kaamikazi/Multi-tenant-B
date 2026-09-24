@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   return response;
 }
 
-const PROTECTED = ["/dashboard", "/settings", "/no-workspace"];
+const PROTECTED = ["/dashboard", "/assistant", "/settings", "/no-workspace"];
 const AUTH_PAGES = ["/login", "/signup"];
 
 // Carry over any refreshed session cookies, or the user is signed out on redirect.

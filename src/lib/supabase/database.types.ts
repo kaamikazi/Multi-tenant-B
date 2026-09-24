@@ -52,6 +52,93 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          tenant_id: string
+          thread_id: string
+          tools_used: string[]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          tenant_id?: string
+          thread_id: string
+          tools_used?: string[]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tenant_id?: string
+          thread_id?: string
+          tools_used?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_thread_id_tenant_id_fkey"
+            columns: ["thread_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          tenant_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -177,6 +264,13 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
+      get_ai_usage: {
+        Args: never
+        Returns: {
+          message_limit: number
+          used: number
+        }[]
+      }
       get_invitation: {
         Args: { p_token: string }
         Returns: {

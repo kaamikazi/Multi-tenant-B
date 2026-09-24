@@ -6,20 +6,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type Plan = Database["public"]["Enums"]["plan"];
 
-// Keep `seats` in sync with private.seat_limit() in the billing migration,
-// which is what actually enforces it.
+// Keep these limits in sync with private.seat_limit() and
+// private.ai_message_limit() in the migrations, which enforce them.
 export const PLANS: Record<Plan, { name: string; price: number; seats: number | null; features: string[] }> = {
   free: {
     name: "Free",
     price: 0,
     seats: 3,
-    features: ["Up to 3 team seats", "Owner, admin and member roles", "Isolated workspace data"],
+    features: ["Up to 3 team seats", "25 AI assistant messages / month", "Owner, admin and member roles"],
   },
   pro: {
     name: "Pro",
     price: 29,
     seats: null,
-    features: ["Unlimited team seats", "Everything in Free", "Manage billing in the Stripe portal"],
+    features: ["Unlimited team seats", "1,000 AI assistant messages / month", "Everything in Free"],
   },
 };
 
