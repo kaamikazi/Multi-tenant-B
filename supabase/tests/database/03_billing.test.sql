@@ -1,6 +1,6 @@
 -- Plans, billing visibility and Free-plan seat limits.
 begin;
-select plan(18);
+select plan(19);
 
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -106,7 +106,7 @@ select results_eq(
 
 select throws_ok(
   $$ insert into public.invitations (email, role) values ('fourth@acme.test', 'member') $$,
-  '42501', null,
+  '54000', null,
   'a full free workspace cannot invite anyone'
 );
 
@@ -121,7 +121,7 @@ select lives_ok(
 
 select throws_ok(
   $$ insert into public.invitations (email, role) values ('fourth@acme.test', 'member') $$,
-  '42501', null,
+  '54000', null,
   'pending invitations count as seats'
 );
 
@@ -133,6 +133,15 @@ select results_eq(
   'select used from public.get_seat_usage()',
   $$ values (2) $$,
   'expired invitations do not hold a seat'
+);
+
+-- Regression: a policy-based check ran once per statement, so one bulk
+-- insert could create any number of invitations on the Free plan.
+select throws_ok(
+  $$ insert into public.invitations (email, role)
+     select 'bulk-free' || n || '@acme.test', 'member' from generate_series(1, 10) n $$,
+  '54000', null,
+  'one bulk insert cannot exceed the free seat limit'
 );
 
 -- ---------------------------------------------------------------------------

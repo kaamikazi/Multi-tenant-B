@@ -35,6 +35,7 @@ export async function inviteMember(_: ActionResult, formData: FormData): Promise
 
   const { error } = await supabase.from("invitations").insert({ email, role });
   if (error) {
+    if (error.code === "54000") return { error: "All seats on the Free plan are in use. Upgrade to Pro for unlimited seats." };
     if (error.code === "23505") return { error: `There's already a pending invitation for ${email}.` };
     if (error.code === "42501") return { error: `Your role (${member.role}) can't invite ${role}s.` };
     if (error.code === "23514") return { error: "Enter a valid email address." };

@@ -56,17 +56,23 @@ export async function startCheckout() {
   const customer = await getOrCreateCustomer(member.tenant, member.email);
   const base = await origin();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer,
-    line_items: [{ price: price.id, quantity: 1 }],
-    client_reference_id: member.tenant.id,
-    subscription_data: { metadata: { tenant_id: member.tenant.id } },
-    success_url: `${base}/api/stripe/checkout-return?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${base}/settings/billing?checkout=cancelled`,
-  });
-
-  redirect(session.url!);
+  let url: string;
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer,
+      line_items: [{ price: price.id, quantity: 1 }],
+      client_reference_id: member.tenant.id,
+      subscription_data: { metadata: { tenant_id: member.tenant.id } },
+      success_url: `${base}/api/stripe/checkout-return?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/settings/billing?checkout=cancelled`,
+    });
+    url = session.url!;
+  } catch (e) {
+    console.error("Stripe checkout failed", e);
+    redirect("/settings/billing?error=checkout-failed");
+  }
+  redirect(url);
 }
 
 export async function openBillingPortal() {

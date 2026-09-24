@@ -13,6 +13,7 @@ const ERRORS: Record<string, string> = {
   "not-configured": "Stripe isn't configured for this deployment yet.",
   "no-price": "The Pro price doesn't exist in Stripe yet. Run `npm run stripe:setup`.",
   portal: "Stripe's customer portal isn't set up. Save the portal settings once in the Stripe test dashboard.",
+  "checkout-failed": "Stripe couldn't start checkout. See the server log. Re-running `npm run stripe:setup` fixes a missing product tax code.",
   checkout: "We couldn't confirm that checkout. If you were charged, it will appear here shortly.",
 };
 
