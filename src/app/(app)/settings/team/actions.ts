@@ -26,6 +26,13 @@ export async function inviteMember(_: ActionResult, formData: FormData): Promise
   const { data: existing } = await supabase.from("users").select("id").ilike("email", email).maybeSingle();
   if (existing) return { error: `${email} is already on the team.` };
 
+  // The database enforces the seat limit too; checking first gives a clearer
+  // message than the RLS violation it would otherwise raise.
+  const { data: seats } = await supabase.rpc("get_seat_usage").maybeSingle();
+  if (seats?.seat_limit != null && seats.used >= seats.seat_limit) {
+    return { error: `All ${seats.seat_limit} seats on the Free plan are in use. Upgrade to Pro for unlimited seats.` };
+  }
+
   const { error } = await supabase.from("invitations").insert({ email, role });
   if (error) {
     if (error.code === "23505") return { error: `There's already a pending invitation for ${email}.` };

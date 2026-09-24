@@ -3,6 +3,7 @@ import { NavLinks, type NavItem } from "./nav-links";
 import { Logo } from "@/components/logo";
 import { Button, RoleBadge } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
+import { PLANS } from "@/lib/billing";
 import { can } from "@/lib/rbac";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -31,8 +32,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <p className="truncate text-sm font-medium" title={member.tenant.name}>
             {member.tenant.name}
           </p>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <RoleBadge role={member.role} />
+            <span className="text-xs text-muted">{PLANS[member.tenant.plan].name} plan</span>
           </div>
         </div>
 

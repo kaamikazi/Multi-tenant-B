@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:db": "bash scripts/test-db.sh",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "stripe:setup": "node --env-file=.env.local scripts/stripe-setup.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -16,7 +17,8 @@
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -21,6 +21,7 @@ export const ROLE_DESCRIPTION: Record<Role, string> = {
 type Permission =
   | "team:view_invitations"
   | "billing:view"
+  | "billing:manage"
   | "workspace:rename"
   | "roles:change"
   | "ownership:transfer";
@@ -28,6 +29,7 @@ type Permission =
 const PERMISSIONS: Record<Permission, readonly Role[]> = {
   "team:view_invitations": ["owner", "admin"],
   "billing:view": ["owner", "admin"],
+  "billing:manage": ["owner"],
   "workspace:rename": ["owner"],
   "roles:change": ["owner"],
   "ownership:transfer": ["owner"],
@@ -65,6 +67,7 @@ export function describePermissions(role: Role) {
     { label: "Remove admins", allowed: canRemove(role, "admin") },
     { label: "Change roles", allowed: can(role, "roles:change") },
     { label: "View billing", allowed: can(role, "billing:view") },
+    { label: "Change plan", allowed: can(role, "billing:manage") },
     { label: "Rename workspace", allowed: can(role, "workspace:rename") },
     { label: "Transfer ownership", allowed: can(role, "ownership:transfer") },
   ];

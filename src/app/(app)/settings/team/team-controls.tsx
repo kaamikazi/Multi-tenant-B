@@ -14,8 +14,11 @@ import { ROLE_LABEL, type Role } from "@/lib/rbac";
 const selectClass =
   "h-9 rounded-md border border-line bg-surface px-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
 
-export function InviteForm({ roles }: { roles: Role[] }) {
+type Seats = { used: number; limit: number | null };
+
+export function InviteForm({ roles, seats }: { roles: Role[]; seats: Seats | null }) {
   const [state, action, pending] = useActionState<ActionResult, FormData>(inviteMember, {});
+  const full = seats?.limit != null && seats.used >= seats.limit;
 
   return (
     <form action={action} className="grid gap-3 px-5 py-4">
@@ -35,8 +38,14 @@ export function InviteForm({ roles }: { roles: Role[] }) {
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
           ))}
         </select>
-        <Button type="submit" disabled={pending}>{pending ? "Inviting…" : "Send invite"}</Button>
+        <Button type="submit" disabled={pending || full}>{pending ? "Inviting…" : "Send invite"}</Button>
       </div>
+      {seats?.limit != null && (
+        <p className={`text-xs ${full ? "text-danger" : "text-muted"}`}>
+          {seats.used} of {seats.limit} seats used on the Free plan
+          {full ? ". Upgrade to Pro on the Billing page to invite more people." : "."}
+        </p>
+      )}
       {roles.length === 1 && (
         <p className="text-xs text-muted">Admins can invite members. Only the owner can invite admins.</p>
       )}

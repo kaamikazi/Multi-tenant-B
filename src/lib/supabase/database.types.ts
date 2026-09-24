@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing: {
+        Row: {
+          cancel_at_period_end: boolean
+          current_period_end: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          current_period_end?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          current_period_end?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -73,6 +111,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          plan: Database["public"]["Enums"]["plan"]
           slug: string
           updated_at: string
         }
@@ -80,6 +119,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          plan?: Database["public"]["Enums"]["plan"]
           slug: string
           updated_at?: string
         }
@@ -87,6 +127,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          plan?: Database["public"]["Enums"]["plan"]
           slug?: string
           updated_at?: string
         }
@@ -145,6 +186,13 @@ export type Database = {
           tenant_name: string
         }[]
       }
+      get_seat_usage: {
+        Args: never
+        Returns: {
+          seat_limit: number
+          used: number
+        }[]
+      }
       set_member_role: {
         Args: {
           p_role: Database["public"]["Enums"]["tenant_role"]
@@ -155,6 +203,7 @@ export type Database = {
       transfer_ownership: { Args: { p_new_owner: string }; Returns: undefined }
     }
     Enums: {
+      plan: "free" | "pro"
       tenant_role: "owner" | "admin" | "member"
     }
     CompositeTypes: {
@@ -283,6 +332,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      plan: ["free", "pro"],
       tenant_role: ["owner", "admin", "member"],
     },
   },

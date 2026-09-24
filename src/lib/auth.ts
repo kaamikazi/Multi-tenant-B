@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { Plan } from "@/lib/billing";
 import type { Role } from "@/lib/rbac";
 
 export type Member = {
@@ -10,7 +11,7 @@ export type Member = {
   email: string;
   fullName: string | null;
   role: Role;
-  tenant: { id: string; name: string; slug: string };
+  tenant: { id: string; name: string; slug: string; plan: Plan };
 };
 
 /** The signed-in auth user's id and email, or null. Deduplicated per request. */
@@ -32,7 +33,7 @@ export const getMember = cache(async (): Promise<Member | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("users")
-    .select("id, email, full_name, role, tenant:tenants (id, name, slug)")
+    .select("id, email, full_name, role, tenant:tenants (id, name, slug, plan)")
     .eq("id", authUser.id)
     .maybeSingle();
 

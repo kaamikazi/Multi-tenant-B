@@ -29,6 +29,8 @@ export default async function TeamPage() {
         .order("created_at", { ascending: false })
     : { data: [] };
 
+  const { data: seats } = showInvites ? await supabase.rpc("get_seat_usage").maybeSingle() : { data: null };
+
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
 
@@ -43,7 +45,10 @@ export default async function TeamPage() {
         {showInvites && (
           <Card>
             <CardHeader title="Invite a teammate" description="They'll get a link to join this workspace." />
-            <InviteForm roles={invitableRoles(me.role)} />
+            <InviteForm
+              roles={invitableRoles(me.role)}
+              seats={seats ? { used: seats.used, limit: seats.seat_limit } : null}
+            />
           </Card>
         )}
 
