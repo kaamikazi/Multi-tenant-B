@@ -181,7 +181,8 @@ reset role;
 -- A removed teammate's leads become unassigned rather than disappearing.
 delete from public.users where id = 'a0000000-0000-0000-0000-000000000003';
 select results_eq(
-  $$ select count(*)::int, count(owner_id)::int from public.leads $$,
+  $$ select count(*)::int, count(owner_id)::int from public.leads
+      where tenant_id = current_setting('test.acme')::uuid $$,
   $$ values (2, 0) $$,
   'removing a teammate unassigns their leads instead of deleting them'
 );

@@ -17,23 +17,23 @@ $$;
 -- ---------------------------------------------------------------------------
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'olivia@northwind.test',
-   '{"company_name": "Northwind Traders", "full_name": "Olivia Owner"}');
+   '{"company_name": "Zephyr Test Traders", "full_name": "Olivia Owner"}');
 
 select results_eq(
   $$ select t.name, t.slug, u.role::text, u.full_name
        from public.users u join public.tenants t on t.id = u.tenant_id
       where u.id = '10000000-0000-0000-0000-000000000001' $$,
-  $$ values ('Northwind Traders', 'northwind-traders', 'owner', 'Olivia Owner') $$,
+  $$ values ('Zephyr Test Traders', 'zephyr-test-traders', 'owner', 'Olivia Owner') $$,
   'sign-up creates a tenant with a slug and makes the user its owner'
 );
 
 insert into auth.users (id, email, raw_user_meta_data) values
-  ('20000000-0000-0000-0000-000000000001', 'other@northwind2.test', '{"company_name": "Northwind Traders"}');
+  ('20000000-0000-0000-0000-000000000001', 'other@northwind2.test', '{"company_name": "Zephyr Test Traders"}');
 
 select matches(
   (select t.slug from public.tenants t join public.users u on u.tenant_id = t.id
     where u.id = '20000000-0000-0000-0000-000000000001'),
-  '^northwind-traders-[0-9a-f]{6}$',
+  '^zephyr-test-traders-[0-9a-f]{6}$',
   'a duplicate company name gets a unique slug'
 );
 
@@ -81,7 +81,7 @@ select '10000000-0000-0000-0000-000000000002', 'adam@northwind.test',
 select results_eq(
   $$ select u.role::text, t.name from public.users u join public.tenants t on t.id = u.tenant_id
       where u.id = '10000000-0000-0000-0000-000000000002' $$,
-  $$ values ('admin', 'Northwind Traders') $$,
+  $$ values ('admin', 'Zephyr Test Traders') $$,
   'signing up with an invite joins the inviting tenant with the invited role'
 );
 

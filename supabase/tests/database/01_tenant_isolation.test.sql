@@ -172,7 +172,9 @@ reset role;
 -- Cross-check as superuser that the blocked writes really did nothing
 -- ---------------------------------------------------------------------------
 select results_eq(
-  $$ select name from public.tenants order by slug $$,
+  $$ select name from public.tenants
+      where id in ('aaaaaaaa-0000-0000-0000-000000000000', 'bbbbbbbb-0000-0000-0000-000000000000')
+      order by slug $$,
   $$ values ('Acme Inc'), ('Globex') $$,
   'only the legitimate rename was persisted'
 );

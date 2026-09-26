@@ -46,3 +46,6 @@ supabase/.temp/
 
 # local editor/agent tooling
 .claude/
+
+# demo logins written by `npm run seed`
+.demo-credentials*
