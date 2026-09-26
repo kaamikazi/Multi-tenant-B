@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const nav: NavItem[] = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/leads", label: "Leads" },
+    { href: "/appointments", label: "Appointments" },
     { href: "/assistant", label: "Assistant" },
     { href: "/settings/team", label: "Team" },
     ...(can(member.role, "billing:view") ? [{ href: "/settings/billing", label: "Billing" }] : []),

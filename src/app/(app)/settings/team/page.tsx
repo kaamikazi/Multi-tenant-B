@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { revokeInvitation } from "./actions";
-import { CopyLinkButton, InviteForm, MemberControls } from "./team-controls";
+import { InviteForm, MemberControls } from "./team-controls";
+import { CopyLinkButton } from "@/components/copy-link-button";
 import { Button, Card, CardHeader, PageHeader, RoleBadge } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
 import { can, canRemove, canRevokeInvite, invitableRoles, type Role } from "@/lib/rbac";

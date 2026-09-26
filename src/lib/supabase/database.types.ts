@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          cancel_token: string
+          created_at: string
+          created_by: string | null
+          email: string
+          ends_at: string
+          id: string
+          lead_id: string | null
+          name: string
+          notes: string | null
+          source: Database["public"]["Enums"]["appointment_source"]
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_token?: string
+          created_at?: string
+          created_by?: string | null
+          email: string
+          ends_at: string
+          id?: string
+          lead_id?: string | null
+          name: string
+          notes?: string | null
+          source?: Database["public"]["Enums"]["appointment_source"]
+          starts_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_token?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          ends_at?: string
+          id?: string
+          lead_id?: string | null
+          name?: string
+          notes?: string | null
+          source?: Database["public"]["Enums"]["appointment_source"]
+          starts_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_lead_id_tenant_id_fkey"
+            columns: ["lead_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "appointments_lead_id_tenant_id_fkey"
+            columns: ["lead_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "leads_scored"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "appointments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing: {
         Row: {
           cancel_at_period_end: boolean
@@ -45,6 +125,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "billing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_settings: {
+        Row: {
+          days: number[]
+          enabled: boolean
+          end_time: string
+          headline: string
+          horizon_days: number
+          min_notice_hours: number
+          slot_minutes: number
+          start_time: string
+          tenant_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          days?: number[]
+          enabled?: boolean
+          end_time?: string
+          headline?: string
+          horizon_days?: number
+          min_notice_hours?: number
+          slot_minutes?: number
+          start_time?: string
+          tenant_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          days?: number[]
+          enabled?: boolean
+          end_time?: string
+          headline?: string
+          horizon_days?: number
+          min_notice_hours?: number
+          slot_minutes?: number
+          start_time?: string
+          tenant_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
@@ -384,11 +514,49 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
+      book_appointment: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_notes?: string
+          p_slug: string
+          p_starts_at: string
+        }
+        Returns: {
+          appointment_id: string
+          cancel_token: string
+          ends_at: string
+          starts_at: string
+        }[]
+      }
+      cancel_booking: { Args: { p_token: string }; Returns: undefined }
       get_ai_usage: {
         Args: never
         Returns: {
           message_limit: number
           used: number
+        }[]
+      }
+      get_booking: {
+        Args: { p_token: string }
+        Returns: {
+          ends_at: string
+          name: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          tenant_name: string
+          tenant_slug: string
+          timezone: string
+        }[]
+      }
+      get_booking_page: {
+        Args: { p_slug: string }
+        Returns: {
+          enabled: boolean
+          headline: string
+          slot_minutes: number
+          tenant_name: string
+          timezone: string
         }[]
       }
       get_invitation: {
@@ -398,6 +566,13 @@ export type Database = {
           role: Database["public"]["Enums"]["tenant_role"]
           status: string
           tenant_name: string
+        }[]
+      }
+      get_open_slots: {
+        Args: { p_days?: number; p_slug: string }
+        Returns: {
+          ends_at: string
+          starts_at: string
         }[]
       }
       get_seat_usage: {
@@ -417,6 +592,8 @@ export type Database = {
       transfer_ownership: { Args: { p_new_owner: string }; Returns: undefined }
     }
     Enums: {
+      appointment_source: "booking_page" | "team"
+      appointment_status: "booked" | "cancelled" | "completed"
       lead_source:
         | "referral"
         | "demo_request"
@@ -556,6 +733,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      appointment_source: ["booking_page", "team"],
+      appointment_status: ["booked", "cancelled", "completed"],
       lead_source: [
         "referral",
         "demo_request",

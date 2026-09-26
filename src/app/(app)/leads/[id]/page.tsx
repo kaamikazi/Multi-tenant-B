@@ -5,6 +5,7 @@ import { deleteLead, logEngagement } from "../actions";
 import { LeadForm } from "../lead-form";
 import { ScoreBadge, ScoreBreakdown } from "../score-ui";
 import { Alert, Button, Card, CardHeader } from "@/components/ui";
+import { STATUS_LABEL as APPOINTMENT_STATUS, formatDay, formatRange } from "@/lib/appointments";
 import { requireMember } from "@/lib/auth";
 import {
   SOURCE_LABEL,
@@ -30,7 +31,12 @@ export default async function LeadPage({ params, searchParams }: PageProps<"/lea
   const { data: lead } = await supabase.from("leads_scored").select("*").eq("id", id).maybeSingle();
   if (!lead?.id || !lead.name) notFound();
 
-  const { data: team } = await supabase.from("users").select("id, full_name, email");
+  const [{ data: team }, { data: meetings }, { data: booking }] = await Promise.all([
+    supabase.from("users").select("id, full_name, email"),
+    supabase.from("appointments").select("id, starts_at, ends_at, status, source").eq("lead_id", id).order("starts_at", { ascending: false }).limit(10),
+    supabase.from("booking_settings").select("timezone").maybeSingle(),
+  ]);
+  const tz = booking?.timezone ?? "UTC";
   const assignees = (team ?? []).map((u) => ({ id: u.id, name: u.full_name ?? u.email }));
   const ownerName = assignees.find((a) => a.id === lead.owner_id)?.name;
   const editable = canEditLead(me.role, me.id, lead.owner_id);
@@ -64,6 +70,30 @@ export default async function LeadPage({ params, searchParams }: PageProps<"/lea
             <div className="px-5 py-4">
               <ScoreBreakdown breakdown={parseBreakdown(lead.breakdown)} />
             </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Meetings"
+              description="Booking a meeting counts as engagement and refreshes the recency score."
+              action={<Link href="/appointments" className="text-sm font-medium text-accent hover:underline">Book one</Link>}
+            />
+            {meetings?.length ? (
+              <ul className="divide-y divide-line text-sm">
+                {meetings.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+                    <span className={m.status === "cancelled" ? "text-muted line-through" : ""}>
+                      {formatDay(m.starts_at, tz, "short")}, {formatRange(m.starts_at, m.ends_at, tz)}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {APPOINTMENT_STATUS[m.status]} · {m.source === "booking_page" ? "Booked online" : "Booked by the team"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-5 py-4 text-sm text-muted">No meetings with this lead yet.</p>
+            )}
           </Card>
 
           <Card>

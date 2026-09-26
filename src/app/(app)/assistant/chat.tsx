@@ -159,7 +159,7 @@ export function Chat({ threadId, initialMessages, suggestions, disabledReason, t
                 send(input);
               }
             }}
-            placeholder="Ask about your leads, team or billing…"
+            placeholder="Ask about your leads, calendar, team or billing…"
             className="max-h-40 min-h-10 flex-1 resize-y rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50"
           />
           <Button type="submit" disabled={busy || !input.trim() || Boolean(disabledReason)}>

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Member } from "@/lib/auth";
 import { PLANS } from "@/lib/billing";
 import { OPEN_STATUSES, SOURCE_LABEL, STATUS_LABEL, parseBreakdown, topReasons, type LeadStatus } from "@/lib/leads";
+import { dayKey, formatDay, formatRange, zonedTimeToUtc } from "@/lib/appointments";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Tools the assistant may call to answer questions.
@@ -239,6 +240,64 @@ const TOOLS: Tool[] = [
           : null,
         unassigned_open_leads: open.filter((l) => !l.owner_id).length,
       };
+    },
+  },
+  {
+    label: "appointments",
+    declaration: {
+      name: "list_appointments",
+      description:
+        "The team's appointments in a date range, soonest first, in the workspace timezone: time, who with, " +
+        "status, whether it was booked online or by the team, and the linked lead. " +
+        "Use for 'what's on my calendar this week?' or 'when am I meeting Priya?'.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          range: {
+            type: "string",
+            enum: ["today", "this_week", "next_7_days", "next_30_days", "past_30_days"],
+            description: "Which period to list. Default next_7_days.",
+          },
+          include_cancelled: { type: "boolean", description: "Also list cancelled appointments. Default false." },
+          mine_only: { type: "boolean", description: "Only meetings the user booked or with leads assigned to them." },
+        },
+      },
+    },
+    async run({ supabase, member }, args) {
+      const { data: settings } = await supabase.from("booking_settings").select("timezone").maybeSingle();
+      const tz = settings?.timezone ?? "UTC";
+      const day = 86_400_000;
+      const now = Date.now();
+      const startOfToday = zonedTimeToUtc(dayKey(new Date(now).toISOString(), tz), "00:00", tz)!.getTime();
+      const range = typeof args.range === "string" ? args.range : "next_7_days";
+      const [from, to] =
+        range === "today" ? [startOfToday, startOfToday + day]
+        : range === "this_week" ? [startOfToday, startOfToday + 7 * day]
+        : range === "next_30_days" ? [now, now + 30 * day]
+        : range === "past_30_days" ? [now - 30 * day, now]
+        : [now, now + 7 * day];
+
+      let query = supabase
+        .from("appointments")
+        .select("starts_at, ends_at, name, email, status, source, created_by, lead_id")
+        .gte("starts_at", new Date(from).toISOString())
+        .lt("starts_at", new Date(to).toISOString())
+        .order("starts_at")
+        .limit(50);
+      if (args.include_cancelled !== true) query = query.neq("status", "cancelled");
+      const [{ data: appts }, { data: leads }] = await Promise.all([query, supabase.from("leads").select("id, name, owner_id")]);
+      const leadById = new Map((leads ?? []).map((l) => [l.id, l]));
+
+      const rows = (appts ?? [])
+        .filter((a) => args.mine_only !== true || a.created_by === member.id || (a.lead_id && leadById.get(a.lead_id)?.owner_id === member.id))
+        .map((a) => ({
+          when: `${formatDay(a.starts_at, tz, "short")}, ${formatRange(a.starts_at, a.ends_at, tz)}`,
+          with: `${a.name} <${a.email}>`,
+          status: a.status,
+          booked: a.source === "booking_page" ? "online" : "by the team",
+          lead: a.lead_id ? (leadById.get(a.lead_id)?.name ?? null) : null,
+        }));
+      return { timezone: tz, range, count: rows.length, appointments: rows };
     },
   },
 ];

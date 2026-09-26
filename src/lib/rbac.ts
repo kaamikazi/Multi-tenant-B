@@ -22,6 +22,7 @@ type Permission =
   | "team:view_invitations"
   | "billing:view"
   | "billing:manage"
+  | "booking:settings"
   | "workspace:rename"
   | "roles:change"
   | "ownership:transfer";
@@ -30,6 +31,7 @@ const PERMISSIONS: Record<Permission, readonly Role[]> = {
   "team:view_invitations": ["owner", "admin"],
   "billing:view": ["owner", "admin"],
   "billing:manage": ["owner"],
+  "booking:settings": ["owner", "admin"],
   "workspace:rename": ["owner"],
   "roles:change": ["owner"],
   "ownership:transfer": ["owner"],
@@ -68,6 +70,7 @@ export function describePermissions(role: Role) {
     { label: "Change roles", allowed: can(role, "roles:change") },
     { label: "View billing", allowed: can(role, "billing:view") },
     { label: "Change plan", allowed: can(role, "billing:manage") },
+    { label: "Edit booking settings", allowed: can(role, "booking:settings") },
     { label: "Rename workspace", allowed: can(role, "workspace:rename") },
     { label: "Transfer ownership", allowed: can(role, "ownership:transfer") },
   ];

@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: "Assistant · TenantFlow" };
 const SUGGESTIONS = {
   manager: [
     "Who are my hottest leads?",
+    "What's on our calendar this week?",
     "Give me an overview of this workspace",
     "Who is on the team and what are their roles?",
     "Are there any pending invitations?",
