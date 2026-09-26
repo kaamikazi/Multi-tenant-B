@@ -73,7 +73,7 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
       />
 
       <div className="grid gap-4 md:grid-cols-[13rem_1fr]">
-        <nav aria-label="Conversations" className="grid content-start gap-1">
+        <nav aria-label="Conversations" className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-1">
           <Link
             href="/assistant"
             className={`rounded-md px-3 py-2 text-sm font-medium ${!threadId ? "bg-surface" : "text-accent hover:bg-surface"}`}
