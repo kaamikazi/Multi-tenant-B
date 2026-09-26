@@ -33,8 +33,16 @@ type StreamRequest = Omit<Parameters<GoogleGenAI["models"]["generateContentStrea
  * as working once it has produced a chunk. After that, errors propagate: we
  * can't un-send text that already reached the user.
  */
+// A model that just returned 503/429 is skipped for a while, so a busy
+// period costs one failed attempt per server rather than one per tool step.
+const COOL_DOWN_MS = 2 * 60_000;
+const unavailableUntil = new Map<string, number>();
+
 async function* streamWithFallback(request: StreamRequest) {
-  const models = [...new Set([GEMINI_MODEL, ...FALLBACK_MODELS])];
+  const all = [...new Set([GEMINI_MODEL, ...FALLBACK_MODELS])];
+  const ready = all.filter((m) => (unavailableUntil.get(m) ?? 0) <= Date.now());
+  // If everything is cooling down, try them all anyway rather than fail outright.
+  const models = ready.length ? ready : all;
   let lastError: unknown;
   for (const [i, model] of models.entries()) {
     let started = false;
@@ -47,6 +55,7 @@ async function* streamWithFallback(request: StreamRequest) {
       return;
     } catch (e) {
       if (started || !isOverloaded(e)) throw e;
+      unavailableUntil.set(model, Date.now() + COOL_DOWN_MS);
       console.warn(`Gemini ${model} unavailable (${(e as { status?: number }).status}); trying the next model`);
       lastError = e;
       await new Promise((r) => setTimeout(r, 300 * (i + 1)));
