@@ -4,8 +4,15 @@ import type { Database } from "./database.types";
 
 // Refreshes the auth session cookie on every request so Server Components
 // always see a valid user, and turns away signed-out visitors early.
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+// `extraRequestHeaders` (the CSP carrying this request's nonce) are forwarded
+// to the page render along with any refreshed cookies.
+export async function updateSession(request: NextRequest, extraRequestHeaders: Record<string, string> = {}) {
+  const forward = () => {
+    const headers = new Headers(request.headers);
+    for (const [key, value] of Object.entries(extraRequestHeaders)) headers.set(key, value);
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = forward();
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +24,7 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = forward();
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );

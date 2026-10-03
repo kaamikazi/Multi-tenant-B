@@ -11,7 +11,7 @@ export type Member = {
   email: string;
   fullName: string | null;
   role: Role;
-  tenant: { id: string; name: string; slug: string; plan: Plan };
+  tenant: { id: string; name: string; slug: string; plan: Plan; aiEnabled: boolean };
 };
 
 /** The signed-in auth user's id and email, or null. Deduplicated per request. */
@@ -33,7 +33,7 @@ export const getMember = cache(async (): Promise<Member | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("users")
-    .select("id, email, full_name, role, tenant:tenants (id, name, slug, plan)")
+    .select("id, email, full_name, role, tenant:tenants (id, name, slug, plan, ai_enabled)")
     .eq("id", authUser.id)
     .maybeSingle();
 
@@ -43,7 +43,13 @@ export const getMember = cache(async (): Promise<Member | null> => {
     email: data.email,
     fullName: data.full_name,
     role: data.role,
-    tenant: data.tenant,
+    tenant: {
+      id: data.tenant.id,
+      name: data.tenant.name,
+      slug: data.tenant.slug,
+      plan: data.tenant.plan,
+      aiEnabled: data.tenant.ai_enabled,
+    },
   };
 });
 

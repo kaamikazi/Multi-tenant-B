@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { revokeInvitation } from "./actions";
 import { InviteForm, MemberControls } from "./team-controls";
 import { CopyLinkButton } from "@/components/copy-link-button";
-import { Button, Card, CardHeader, PageHeader, RoleBadge } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, PageHeader, RoleBadge } from "@/components/ui";
 import { requireMember } from "@/lib/auth";
+import { absoluteUrl } from "@/lib/security/urls";
 import { can, canRemove, canRevokeInvite, invitableRoles, type Role } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,8 +32,6 @@ export default async function TeamPage() {
 
   const { data: seats } = showInvites ? await supabase.rpc("get_seat_usage").maybeSingle() : { data: null };
 
-  const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
 
   return (
     <>
@@ -43,6 +41,12 @@ export default async function TeamPage() {
       />
 
       <div className="grid gap-6">
+        {seats?.over_limit && (
+          <Alert>
+            This workspace has {seats.members} members but its plan includes {seats.seat_limit} seats. Nobody has been
+            removed, but no one new can join until the plan is upgraded or seats are freed.
+          </Alert>
+        )}
         {showInvites && (
           <Card>
             <CardHeader title="Invite a teammate" description="They'll get a link to join this workspace." />
@@ -109,7 +113,7 @@ export default async function TeamPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        {!expired && <CopyLinkButton url={`${origin}/invite/${invite.token}`} />}
+                        {!expired && <CopyLinkButton url={absoluteUrl(`/invite/${invite.token}`)} />}
                         {canRevokeInvite(me.role, invite.role) && (
                           <form action={revokeInvitation}>
                             <input type="hidden" name="id" value={invite.id} />

@@ -24,3 +24,14 @@ export async function renameWorkspace(_: ActionResult, formData: FormData): Prom
   revalidatePath("/", "layout");
   return { success: "Workspace renamed." };
 }
+
+/** Owner-only (the tenants UPDATE policy). With AI off, the database refuses new questions. */
+export async function setAiEnabled(formData: FormData) {
+  const member = await requireMember();
+  const supabase = await createClient();
+  await supabase
+    .from("tenants")
+    .update({ ai_enabled: formData.get("ai_enabled") === "on" })
+    .eq("id", member.tenant.id);
+  revalidatePath("/", "layout");
+}

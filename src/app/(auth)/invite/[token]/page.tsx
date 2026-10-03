@@ -22,7 +22,9 @@ export default async function InvitePage({ params, searchParams }: PageProps<"/i
         ? "This invitation has already been used."
         : invite?.status === "expired"
           ? "This invitation has expired."
-          : "This invitation link isn't valid.";
+          : invite?.status === "no_seats"
+            ? "This workspace has no free seats on its current plan right now."
+            : "This invitation link isn't valid.";
     return (
       <Card className="p-6">
         <h1 className="text-xl font-semibold">Invitation unavailable</h1>

@@ -10,7 +10,9 @@
     "test:db": "bash scripts/test-db.sh",
     "typecheck": "next typegen && tsc --noEmit",
     "stripe:setup": "node --env-file=.env.local scripts/stripe-setup.mjs",
-    "seed": "node --env-file=.env.local scripts/seed.mjs"
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "test:unit": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
+    "billing:reconcile": "node --env-file=.env.local scripts/reconcile-billing.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { setAppointmentStatus } from "./actions";
 import { NewAppointmentForm } from "./forms";
 import { CopyLinkButton } from "@/components/copy-link-button";
-import { Button, Card, CardHeader, PageHeader } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, PageHeader } from "@/components/ui";
 import { STATUS_LABEL, canEditAppointment, dayKey, formatDay, formatRange } from "@/lib/appointments";
 import { requireMember } from "@/lib/auth";
+import { absoluteUrl } from "@/lib/security/urls";
 import { can } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Appointments · TenantFlow" };
+
+const ERRORS: Record<string, string> = {
+  transition: "That change isn't allowed: meetings can be marked done only once they have started, and cancelled or completed meetings can't be reopened.",
+  forbidden: "You can only change meetings you booked or that belong to your leads.",
+  failed: "Something went wrong. Please try again.",
+};
 
 const STATUS_STYLE = {
   booked: "bg-accent/15 text-accent",
@@ -20,7 +26,7 @@ const STATUS_STYLE = {
 
 export default async function AppointmentsPage({ searchParams }: PageProps<"/appointments">) {
   const me = await requireMember();
-  const { view } = await searchParams;
+  const { view, error } = await searchParams;
   const past = view === "past";
   const now = new Date().toISOString();
 
@@ -46,8 +52,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
     groups.set(key, [...(groups.get(key) ?? []), a]);
   }
 
-  const h = await headers();
-  const bookingUrl = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}/book/${me.tenant.slug}`;
+  const bookingUrl = absoluteUrl(`/book/${me.tenant.slug}`);
   const manager = can(me.role, "booking:settings");
 
   return (
@@ -56,6 +61,10 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
         title="Appointments"
         description={`Your team calendar. Times in ${tz.replaceAll("_", " ")}. Double bookings are blocked by the database.`}
       />
+
+      {typeof error === "string" && ERRORS[error] && (
+        <div className="mb-4"><Alert>{ERRORS[error]}</Alert></div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid content-start gap-4">
@@ -106,7 +115,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
                             <form action={setAppointmentStatus}>
                               <input type="hidden" name="id" value={a.id} />
                               <input type="hidden" name="status" value="completed" />
-                              <Button type="submit" variant="secondary">Mark done</Button>
+                              <Button type="submit" variant="secondary" disabled={new Date(a.starts_at) > new Date()} title={new Date(a.starts_at) > new Date() ? "Can be marked done once it has started" : undefined}>Mark done</Button>
                             </form>
                             <form action={setAppointmentStatus}>
                               <input type="hidden" name="id" value={a.id} />

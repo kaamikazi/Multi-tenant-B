@@ -212,7 +212,7 @@ select is_empty(
 );
 
 select isnt_empty(
-  $$ update public.appointments set status = 'completed' where name = 'Internal sync' returning id $$,
+  $$ update public.appointments set notes = 'Agenda: pricing' where name = 'Internal sync' returning id $$,
   'a member can update an appointment they created'
 );
 

@@ -40,8 +40,8 @@ select results_eq(
 );
 
 select lives_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     values (current_setting('test.thread')::uuid, 'user', 'How many people are on my team?') $$,
+  $$ insert into public.chat_messages (thread_id, content)
+     values (current_setting('test.thread')::uuid, 'How many people are on my team?') $$,
   'a member can post in their own conversation'
 );
 
@@ -71,8 +71,8 @@ select is_empty(
 );
 
 select throws_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     values (current_setting('test.thread')::uuid, 'assistant', 'injected') $$,
+  $$ insert into public.chat_messages (thread_id, content)
+     values (current_setting('test.thread')::uuid, 'injected') $$,
   '42501', null,
   'nobody can write into someone else''s conversation'
 );
@@ -85,8 +85,8 @@ select is_empty(
 );
 
 select throws_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     values (current_setting('test.thread')::uuid, 'user', 'cross-tenant') $$,
+  $$ insert into public.chat_messages (thread_id, content)
+     values (current_setting('test.thread')::uuid, 'cross-tenant') $$,
   '42501', null,
   'another tenant cannot post into the conversation by id'
 );
@@ -102,11 +102,16 @@ select results_eq(
   'each user message uses one unit of the workspace''s allowance'
 );
 
+-- Assistant replies are written by the server (service_role) only.
+select pg_temp.logout();
+set local role service_role;
 select lives_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     values (current_setting('test.thread')::uuid, 'assistant', 'You have 2 people.') $$,
-  'assistant replies can be stored'
+  $$ select public.record_assistant_message(current_setting('test.thread')::uuid,
+       'a0000000-0000-0000-0000-000000000002', 'You have 2 people.', '{list_team_members}') $$,
+  'the server can store an assistant reply'
 );
+reset role;
+select pg_temp.login('a0000000-0000-0000-0000-000000000002');
 
 select results_eq(
   'select used from public.get_ai_usage()',
@@ -115,23 +120,34 @@ select results_eq(
 );
 
 select throws_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     select current_setting('test.thread')::uuid, 'user', 'bulk ' || n from generate_series(1, 30) n $$,
+  $$ insert into public.chat_messages (thread_id, content)
+     select current_setting('test.thread')::uuid, 'bulk ' || n from generate_series(1, 30) n $$,
   '54000', null,
-  'one bulk insert cannot exceed the monthly allowance'
+  'one bulk insert cannot exceed the budgets'
 );
 
+-- Fill the month's ledger to 24 (no user attached, so the per-minute limit
+-- doesn't apply), then the 25th message is the last one accepted.
+select pg_temp.logout();
+insert into private.ai_usage (tenant_id, user_id)
+select current_setting('test.acme')::uuid, null from generate_series(1, 23);
+select pg_temp.login('a0000000-0000-0000-0000-000000000002');
+
 select lives_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     select current_setting('test.thread')::uuid, 'user', 'msg ' || n from generate_series(1, 24) n $$,
+  $$ insert into public.chat_messages (thread_id, content)
+     values (current_setting('test.thread')::uuid, 'The 25th question') $$,
   'messages up to the allowance are accepted'
 );
 
-select throws_ok(
-  $$ insert into public.chat_messages (thread_id, role, content)
-     values (current_setting('test.thread')::uuid, 'user', 'one too many') $$,
-  '54000', null,
-  'the 26th message of the month is refused'
+select pg_temp.logout();
+update public.chat_threads set generating_until = null where id = current_setting('test.thread')::uuid;
+select pg_temp.login('a0000000-0000-0000-0000-000000000002');
+
+select throws_like(
+  $$ insert into public.chat_messages (thread_id, content)
+     values (current_setting('test.thread')::uuid, 'one too many') $$,
+  '%used all 25 AI messages%',
+  'the 26th message of the month is refused by the quota'
 );
 
 select lives_ok(

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionResult } from "../settings/team/actions";
 import { SLOT_LENGTHS, zonedTimeToUtc, type AppointmentStatus } from "@/lib/appointments";
 import { requireMember } from "@/lib/auth";
@@ -60,10 +61,14 @@ export async function createAppointment(_: ActionResult, formData: FormData): Pr
 export async function setAppointmentStatus(formData: FormData) {
   await requireMember();
   const status = text(formData, "status") as AppointmentStatus;
-  if (!["booked", "cancelled", "completed"].includes(status)) return;
+  if (!["cancelled", "completed"].includes(status)) return;
   const supabase = await createClient();
-  await supabase.from("appointments").update({ status }).eq("id", text(formData, "id"));
+  const { data, error } = await supabase.from("appointments").update({ status }).eq("id", text(formData, "id")).select("id");
   revalidatePath("/appointments");
+  // The database enforces the transition rules; report refusals instead of
+  // failing silently. Only fixed codes go in the URL, never raw messages.
+  if (error) redirect(`/appointments?error=${error.code === "P0001" ? "transition" : "failed"}`);
+  if (!data?.length) redirect("/appointments?error=forbidden");
 }
 
 export async function saveBookingSettings(_: ActionResult, formData: FormData): Promise<ActionResult> {

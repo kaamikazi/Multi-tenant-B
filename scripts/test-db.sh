@@ -8,7 +8,8 @@ cd "$(dirname "$0")/.."
 tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
 status=0
 
-for test_file in supabase/tests/database/*.test.sql; do
+files=("$@"); [ ${#files[@]} -eq 0 ] && files=(supabase/tests/database/*.test.sql)
+for test_file in "${files[@]}"; do
   echo "# $test_file"
   {
     echo "begin;"
@@ -17,7 +18,7 @@ for test_file in supabase/tests/database/*.test.sql; do
     echo "create temp table tap_out (n serial, line text);"
     echo "grant all on tap_out to public; grant all on sequence tap_out_n_seq to public;"
     sed -e '/^begin;$/d' -e '/^rollback;$/d' \
-        -e 's/^select \(plan\|is_empty\|isnt_empty\|isnt\|matches\|results_eq\|throws_ok\|lives_ok\|is\|ok\)(/insert into tap_out(line) select \1(/' \
+        -e 's/^select \(plan\|is_empty\|isnt_empty\|isnt\|matches\|results_eq\|set_eq\|bag_eq\|throws_ok\|throws_like\|lives_ok\|cmp_ok\|is\|ok\)(/insert into tap_out(line) select \1(/' \
         -e 's/^select \* from finish();/insert into tap_out(line) select * from finish();/' \
         "$test_file"
     echo "reset role;"

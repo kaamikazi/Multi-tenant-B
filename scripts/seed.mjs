@@ -2,6 +2,9 @@
 //
 //   npm run seed          wipe the demo workspaces and recreate them
 //
+// Destructive, so it refuses to run unless ALLOW_DESTRUCTIVE_DEMO_SEED=true
+// (see seed-guard.mjs). It only ever deletes the *.example demo accounts.
+//
 // Everything goes through the same paths real users take where it matters:
 // owners sign up (the trigger creates their workspace), teammates join via
 // invitations, and lead scores come from the database's scoring function.
@@ -10,13 +13,15 @@
 import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { seedRefusal } from "./seed-guard.mjs";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const secret = process.env.SUPABASE_SECRET_KEY;
-if (!url || !secret) {
-  console.error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local");
+const refusal = seedRefusal(process.env);
+if (refusal) {
+  console.error(refusal);
   process.exit(1);
 }
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const secret = process.env.SUPABASE_SECRET_KEY;
 const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 

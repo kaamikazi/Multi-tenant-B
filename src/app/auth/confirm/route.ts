@@ -1,5 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { absoluteUrl, safeRelativePath } from "@/lib/security/urls";
 import { createClient } from "@/lib/supabase/server";
 
 // Target of the link in Supabase's confirmation email. Exchanges the one-time
@@ -8,8 +9,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const nextParam = searchParams.get("next") ?? "/dashboard";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard";
+  const next = safeRelativePath(searchParams.get("next") ?? "/dashboard");
 
   const code = searchParams.get("code");
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       ? await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
       : { error: new Error("missing token") };
 
-  if (!error) return NextResponse.redirect(new URL(next, request.url));
+  if (!error) return NextResponse.redirect(absoluteUrl(next));
 
-  return NextResponse.redirect(new URL("/login?notice=link-invalid", request.url));
+  return NextResponse.redirect(absoluteUrl("/login?notice=link-invalid"));
 }

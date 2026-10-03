@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { connection } from "next/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +18,11 @@ export const metadata: Metadata = {
   description: "Multi-tenant AI SaaS platform: tenant isolation, RBAC, AI chatbot, lead scoring, Stripe subscriptions.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Every page renders per request so Next.js can put this request's CSP
+  // nonce on its scripts (see src/proxy.ts). A prerendered page would carry
+  // no nonce and its scripts would be blocked.
+  await connection();
   return (
     <html
       lang="en"

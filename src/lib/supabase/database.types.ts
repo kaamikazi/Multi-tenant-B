@@ -190,15 +190,17 @@ export type Database = {
           role: string
           tenant_id: string
           thread_id: string
+          tokens_used: number | null
           tools_used: string[]
         }
         Insert: {
           content: string
           created_at?: string
           id?: string
-          role: string
+          role?: string
           tenant_id?: string
           thread_id: string
+          tokens_used?: number | null
           tools_used?: string[]
         }
         Update: {
@@ -208,6 +210,7 @@ export type Database = {
           role?: string
           tenant_id?: string
           thread_id?: string
+          tokens_used?: number | null
           tools_used?: string[]
         }
         Relationships: [
@@ -230,6 +233,7 @@ export type Database = {
       chat_threads: {
         Row: {
           created_at: string
+          generating_until: string | null
           id: string
           tenant_id: string
           title: string
@@ -238,6 +242,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          generating_until?: string | null
           id?: string
           tenant_id?: string
           title?: string
@@ -246,6 +251,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          generating_until?: string | null
           id?: string
           tenant_id?: string
           title?: string
@@ -401,6 +407,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          ai_enabled: boolean
           created_at: string
           id: string
           name: string
@@ -409,6 +416,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_enabled?: boolean
           created_at?: string
           id?: string
           name: string
@@ -417,6 +425,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_enabled?: boolean
           created_at?: string
           id?: string
           name?: string
@@ -514,6 +523,66 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
+      ai_list_appointments: {
+        Args: {
+          p_from: string
+          p_include_cancelled?: boolean
+          p_limit?: number
+          p_mine?: boolean
+          p_to: string
+        }
+        Returns: {
+          ends_at: string
+          lead_name: string
+          name: string
+          source: Database["public"]["Enums"]["appointment_source"]
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+        }[]
+      }
+      ai_list_leads: {
+        Args: {
+          p_limit?: number
+          p_mine?: boolean
+          p_status?: string
+          p_tier?: string
+        }
+        Returns: {
+          breakdown: Json
+          company: string
+          last_engaged_at: string
+          name: string
+          owner_is_me: boolean
+          owner_name: string
+          score: number
+          source: Database["public"]["Enums"]["lead_source"]
+          status: Database["public"]["Enums"]["lead_status"]
+          tier: string
+        }[]
+      }
+      ai_pipeline_summary: {
+        Args: never
+        Returns: {
+          average_open_score: number
+          lost: number
+          open_cold: number
+          open_hot: number
+          open_leads: number
+          open_warm: number
+          total_leads: number
+          unassigned_open: number
+          won: number
+        }[]
+      }
+      ai_team_overview: {
+        Args: never
+        Returns: {
+          admins: number
+          members: number
+          owners: number
+          team_size: number
+        }[]
+      }
       book_appointment: {
         Args: {
           p_email: string
@@ -533,6 +602,7 @@ export type Database = {
       get_ai_usage: {
         Args: never
         Returns: {
+          ai_enabled: boolean
           message_limit: number
           used: number
         }[]
@@ -578,9 +648,21 @@ export type Database = {
       get_seat_usage: {
         Args: never
         Returns: {
+          members: number
+          over_limit: boolean
           seat_limit: number
           used: number
         }[]
+      }
+      record_assistant_message: {
+        Args: {
+          p_content: string
+          p_thread: string
+          p_tokens?: number
+          p_tools?: string[]
+          p_user: string
+        }
+        Returns: string
       }
       set_member_role: {
         Args: {

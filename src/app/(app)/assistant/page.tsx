@@ -51,6 +51,8 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
   const outOfMessages = usage?.message_limit != null && usage.used >= usage.message_limit;
   const disabledReason = !assistantConfigured
     ? "Demo: the assistant needs a GEMINI_API_KEY on the server."
+    : usage?.ai_enabled === false
+      ? "The workspace owner has turned the AI assistant off."
     : outOfMessages
       ? `This workspace has used all ${usage.message_limit} AI messages for this month. Upgrade to Pro for more.`
       : null;

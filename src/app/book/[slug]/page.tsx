@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { BookingForm } from "./booking-form";
 import { Card } from "@/components/ui";
 import { dayKey, formatDay, formatRange, formatTime } from "@/lib/appointments";
+import { BOOKING_LIMITS } from "@/lib/rate-limit";
+import { allow, requestIp } from "@/lib/rate-limit-server";
+import { captchaMode } from "@/lib/security/turnstile";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = PageProps<"/book/[slug]">;
@@ -18,6 +22,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BookingPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { date, slot } = await searchParams;
+
+  // Each view computes two weeks of open slots, so repeated scraping is
+  // throttled per IP (see src/lib/rate-limit.ts).
+  if (!(await allow(`view:${await requestIp()}`, BOOKING_LIMITS.viewPerIp))) {
+    return (
+      <Card className="p-8 text-center">
+        <h1 className="text-xl font-semibold">Too many requests</h1>
+        <p className="mt-2 text-sm text-muted">Please wait a minute and reload the page.</p>
+      </Card>
+    );
+  }
 
   // Public: these RPCs run for anonymous visitors and reveal only free slots.
   const supabase = await createClient();
@@ -71,6 +86,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
             slug={slug}
             startsAt={chosen.starts_at}
             summary={`${formatDay(chosen.starts_at, tz)}, ${formatRange(chosen.starts_at, chosen.ends_at, tz)}`}
+            turnstile={captchaMode() === "on" ? { siteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!, nonce: (await headers()).get("x-nonce") ?? undefined } : undefined}
           />
         </Card>
       ) : (

@@ -1,7 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { absoluteUrl, safeRelativePath } from "@/lib/security/urls";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -13,10 +13,6 @@ export type AuthFormState = {
 
 const text = (formData: FormData, key: string) => String(formData.get(key) ?? "").trim();
 
-/** Only allow same-site relative redirects, never "//evil.com" or absolute URLs. */
-function safeNext(next: string) {
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-}
 
 export async function signUp(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = text(formData, "email").toLowerCase();
@@ -35,6 +31,11 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
   if (password.length < 8) {
     return { error: "Use a password of at least 8 characters.", values };
   }
+  // Mirrors the database limits (and bcrypt's 72-byte password limit) so
+  // oversized input gets a clear message rather than a generic auth error.
+  if (fullName.length > 100 || companyName.length > 100 || email.length > 254 || new TextEncoder().encode(password).length > 72) {
+    return { error: "Names can be up to 100 characters, emails 254, passwords 72.", values };
+  }
 
   const supabase = await createClient();
 
@@ -44,6 +45,9 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
     const { data: invite } = await supabase
       .rpc("get_invitation", { p_token: inviteToken })
       .maybeSingle();
+    if (invite?.status === "no_seats") {
+      return { error: "This workspace has no free seats on its current plan. Ask the owner to upgrade or free a seat.", values };
+    }
     if (!invite || invite.status !== "valid") {
       return { error: "This invitation is no longer valid. Ask for a new one.", values };
     }
@@ -52,12 +56,11 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
     }
   }
 
-  const origin = (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+      emailRedirectTo: absoluteUrl("/auth/confirm?next=/dashboard"),
       data: inviteToken
         ? { full_name: fullName, invite_token: inviteToken }
         : { full_name: fullName, company_name: companyName },
@@ -76,7 +79,7 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
 export async function signIn(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = text(formData, "email").toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const next = safeNext(text(formData, "next"));
+  const next = safeRelativePath(text(formData, "next"));
 
   if (!email || !password) {
     return { error: "Enter your email and password.", values: { email } };
