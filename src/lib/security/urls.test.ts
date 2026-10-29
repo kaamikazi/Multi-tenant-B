@@ -49,6 +49,13 @@ test("siteOrigin trusts configuration, not requests", () => {
   assert.throws(() => siteOrigin({ NEXT_PUBLIC_SITE_URL: "not a url" }), /valid URL/);
 });
 
+test("on Vercel, an unset site URL falls back to the project's production domain", () => {
+  const vercel = { NODE_ENV: "production", VERCEL_PROJECT_PRODUCTION_URL: "my-app.vercel.app" };
+  assert.equal(siteOrigin(vercel), "https://my-app.vercel.app");
+  // An explicit setting always wins (e.g. a custom domain).
+  assert.equal(siteOrigin({ ...vercel, NEXT_PUBLIC_SITE_URL: "https://app.example.com" }), "https://app.example.com");
+});
+
 test("absoluteUrl builds links on the canonical origin only", () => {
   assert.equal(absoluteUrl("/invite/tok", ORIGIN), "https://app.example.com/invite/tok");
   assert.equal(absoluteUrl("//evil.com", ORIGIN), "https://app.example.com/");

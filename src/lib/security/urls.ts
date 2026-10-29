@@ -9,11 +9,16 @@ const DEV_ORIGIN = "http://localhost:3000";
  * Absolute links we generate (invitations, auth emails, Stripe redirects)
  * use this rather than the request's Host / Origin / X-Forwarded-* headers,
  * which a client or a misconfigured proxy can set to anything.
- * Throws in production if the setting is missing or malformed, so a bad
- * deployment fails loudly instead of emitting links to the wrong host.
+ * On Vercel, when it is unset, the project's production domain is used
+ * (VERCEL_PROJECT_PRODUCTION_URL is set by Vercel itself, not by requests).
+ * Otherwise throws in production if the setting is missing or malformed, so
+ * a bad deployment fails loudly instead of emitting links to the wrong host.
  */
-export function siteOrigin(env: { NEXT_PUBLIC_SITE_URL?: string; NODE_ENV?: string } = process.env): string {
-  const raw = env.NEXT_PUBLIC_SITE_URL?.trim();
+export function siteOrigin(
+  env: { NEXT_PUBLIC_SITE_URL?: string; NODE_ENV?: string; VERCEL_PROJECT_PRODUCTION_URL?: string } = process.env,
+): string {
+  const vercel = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  const raw = env.NEXT_PUBLIC_SITE_URL?.trim() || (vercel ? `https://${vercel}` : "");
   if (!raw) {
     if (env.NODE_ENV === "production") throw new Error("NEXT_PUBLIC_SITE_URL must be set in production");
     return DEV_ORIGIN;
