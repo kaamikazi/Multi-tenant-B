@@ -242,7 +242,7 @@ This is a demo, and some choices reflect that:
 - **Seeded Pro plans are demo state**, not backed by a real Stripe subscription, so reconciliation (which covers workspaces with a Stripe customer) leaves them alone.
 - **The AI sends workspace data to Google Gemini** when enabled. No HIPAA, GDPR or SOC 2 compliance is claimed. Regulated data needs a provider agreement and further review.
 - **Bearer links aren't hashed at rest.** Their entropy makes guessing infeasible and clients can't read them, but a database leak would expose them. Hashing is a documented follow-up.
-- **The database CI job hasn't run on GitHub yet.** It runs the same suites against a local Docker Supabase, and was written but not executed here. Locally, the suites run against the linked project.
+- **Two ways to run the database tests.** CI applies every migration to a throwaway Supabase in Docker and runs all suites there. Locally, `npm run test:db` runs them against the linked project inside rolled-back transactions.
 
 ---
 
