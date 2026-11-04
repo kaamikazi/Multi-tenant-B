@@ -1,6 +1,7 @@
 # Runs entirely without repository secrets: the build uses dummy public
 # values, and the database suite runs against a throwaway local Supabase
-# stack inside the runner (Docker), never the hosted project.
+# stack inside the runner (Docker), never the hosted project. The e2e job runs
+# Playwright against a production build wired to that same kind of local stack.
 name: CI
 
 on:
@@ -52,6 +53,62 @@ jobs:
       # Postgres + Auth + PostgREST only; applies every migration from scratch.
       - run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: npx supabase test db
+      - if: always()
+        run: npx supabase stop --no-backup
+
+  e2e:
+    name: End-to-end tests (Playwright, local Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # Stripe, Gemini, Turnstile and Upstash stay unset on purpose: billing
+      # runs as a read-only demo and the assistant reports it isn't configured.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Postgres + Auth + PostgREST (behind Kong): what the app talks to.
+      - run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      # The local stack's URL and keys are the CLI's well-known, local-only
+      # development values: they only work against this throwaway container.
+      - name: Export local Supabase URL and keys
+        run: |
+          eval "$(npx supabase status -o env | grep -E '^[A-Z_]+=')"
+          publishable="${PUBLISHABLE_KEY:-$ANON_KEY}"
+          secret="${SECRET_KEY:-$SERVICE_ROLE_KEY}"
+          test -n "$API_URL" && test -n "$publishable" && test -n "$secret"
+          echo "::add-mask::$secret"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$publishable"
+            echo "SUPABASE_SECRET_KEY=$secret"
+          } >> "$GITHUB_ENV"
+      - run: npm run build
+      - name: Start the app
+        run: |
+          nohup npm start > "$RUNNER_TEMP/next.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/; then exit 0; fi
+            sleep 2
+          done
+          echo "The app did not start:"; cat "$RUNNER_TEMP/next.log"; exit 1
+      - run: npm run test:e2e
+      - if: failure()
+        run: mkdir -p test-results && cp "$RUNNER_TEMP/next.log" test-results/next-server.log
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
       - if: always()
         run: npx supabase stop --no-backup
 

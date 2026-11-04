@@ -12,6 +12,7 @@
     "stripe:setup": "node --env-file=.env.local scripts/stripe-setup.mjs",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "test:unit": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
+    "test:e2e": "playwright test",
     "billing:reconcile": "node --env-file=.env.local scripts/reconcile-billing.mjs"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "stripe": "^23.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",

@@ -49,3 +49,10 @@ supabase/.temp/
 
 # demo logins written by `npm run seed`
 .demo-credentials*
+
+# playwright (e2e)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e/.auth/
